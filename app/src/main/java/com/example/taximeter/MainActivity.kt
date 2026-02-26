@@ -1,87 +1,37 @@
 package com.example.taximeter
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
-import android.location.Location
 import android.os.Bundle
-import android.os.Looper
-import android.os.SystemClock
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.google.android.gms.location.*
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var textViewDistance: TextView
-    private lateinit var textViewTime: TextView
-    private lateinit var textViewFare: TextView
     private lateinit var btnStart: Button
     private lateinit var btnStop: Button
     private lateinit var btnReset: Button
-    private lateinit var spinnerCategory: Spinner
-    private lateinit var cbBaggage: CheckBox
-    private lateinit var cbNight: CheckBox
-    private lateinit var cbAnimal: CheckBox
-
-    private var running = false
-    private var startTime = 0L
-    private var elapsedTime = 0L
-
-    private var distanceMeters = 0.0
-    private var lastLocation: Location? = null
-
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private lateinit var locationRequest: LocationRequest
 
     companion object {
         private const val LOCATION_PERMISSION_CODE = 1000
     }
 
-    // Tarifs exemple
-    private val baseFare = mapOf("A" to 3.0, "B" to 4.0, "C" to 5.0, "D" to 6.0)
-    private val perKmRate = mapOf("A" to 1.5, "B" to 2.0, "C" to 2.5, "D" to 3.0)
-    private val baggageFee = 1.0
-    private val nightFee = 2.0
-    private val animalFee = 1.5
-    private val MIN_DISTANCE_METERS = 2f
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        textViewDistance = findViewById(R.id.textViewDistance)
-        textViewTime = findViewById(R.id.textViewTime)
-        textViewFare = findViewById(R.id.textViewFare)
         btnStart = findViewById(R.id.btnStart)
         btnStop = findViewById(R.id.btnStop)
         btnReset = findViewById(R.id.btnReset)
-        spinnerCategory = findViewById(R.id.spinnerCategory)
-        cbBaggage = findViewById(R.id.cbBaggage)
-        cbNight = findViewById(R.id.cbNight)
-        cbAnimal = findViewById(R.id.cbAnimal)
 
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
-        locationRequest = LocationRequest.Builder(
-            Priority.PRIORITY_HIGH_ACCURACY,
-            1000
-        )
-        .setMinUpdateIntervalMillis(500)
-        .build()
-
-        val categories = arrayOf("A", "B", "C", "D")
-        spinnerCategory.adapter =
-            ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, categories)
-
-        btnStart.setOnClickListener { startMeter() }
+        btnStart.setOnClickListener { checkPermissionAndStart() }
         btnStop.setOnClickListener { stopMeter() }
-        btnReset.setOnClickListener { resetMeter() }
     }
 
-    private fun startMeter() {
-
+    private fun checkPermissionAndStart() {
         if (ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -92,22 +42,23 @@ class MainActivity : AppCompatActivity() {
                 arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
                 LOCATION_PERMISSION_CODE
             )
-            return
+        } else {
+            startMeter()
         }
+    }
 
+    private fun startMeter() {
+        val intent = Intent(this, LocationService::class.java)
+        intent.action = LocationService.ACTION_START
+        startService(intent)
         Toast.makeText(this, "Compteur démarré 🚕", Toast.LENGTH_SHORT).show()
+    }
 
-        running = true
-        startTime = SystemClock.elapsedRealtime() - elapsedTime
-        lastLocation = null
-
-        fusedLocationClient.requestLocationUpdates(
-            locationRequest,
-            locationCallback,
-            Looper.getMainLooper()
-        )
-
-        runTimer()
+    private fun stopMeter() {
+        val intent = Intent(this, LocationService::class.java)
+        intent.action = LocationService.ACTION_STOP
+        startService(intent)
+        Toast.makeText(this, "Compteur arrêté", Toast.LENGTH_SHORT).show()
     }
 
     override fun onRequestPermissionsResult(
@@ -121,89 +72,14 @@ class MainActivity : AppCompatActivity() {
             if (grantResults.isNotEmpty() &&
                 grantResults[0] == PackageManager.PERMISSION_GRANTED
             ) {
-                startMeter() // 🔥 relance automatique après permission
+                startMeter()
             } else {
                 Toast.makeText(
                     this,
-                    "Permission GPS nécessaire pour démarrer",
+                    "Permission GPS nécessaire",
                     Toast.LENGTH_LONG
                 ).show()
             }
         }
-    }
-
-    private fun stopMeter() {
-        running = false
-        fusedLocationClient.removeLocationUpdates(locationCallback)
-        Toast.makeText(this, "Compteur arrêté", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun resetMeter() {
-        running = false
-        elapsedTime = 0L
-        distanceMeters = 0.0
-        lastLocation = null
-        textViewDistance.text = "Distance: 0.0 km"
-        textViewTime.text = "Temps: 00:00:00"
-        textViewFare.text = "Tarif: 0.0 €"
-        Toast.makeText(this, "Compteur réinitialisé", Toast.LENGTH_SHORT).show()
-    }
-
-    private val locationCallback = object : LocationCallback() {
-        override fun onLocationResult(result: LocationResult) {
-            if (!running) return
-
-            val location = result.lastLocation ?: return
-
-            // 🔥 Ignore si précision mauvaise (> 20 mètres)
-            if (location.accuracy > 20) return
-
-            if (lastLocation != null) {
-
-                val distance = lastLocation!!.distanceTo(location)
-
-                // 🔥 Ignore les micro déplacements (< 2 mètres)
-                if (distance > MIN_DISTANCE_METERS) {
-                    distanceMeters += distance
-            }
-        }
-
-        lastLocation = location
-        updateDisplay()
-    }
-}
-
-    private fun runTimer() {
-        Thread {
-            while (running) {
-                elapsedTime = SystemClock.elapsedRealtime() - startTime
-                runOnUiThread { updateDisplay() }
-                Thread.sleep(1000)
-            }
-        }.start()
-    }
-
-    private fun updateDisplay() {
-        val totalSeconds = elapsedTime / 1000
-        val hours = totalSeconds / 3600
-        val minutes = (totalSeconds % 3600) / 60
-        val seconds = totalSeconds % 60
-        textViewTime.text =
-            String.format("Temps: %02d:%02d:%02d", hours, minutes, seconds)
-
-        val distanceKm = distanceMeters / 1000
-        textViewDistance.text =
-            String.format("Distance: %.2f km", distanceKm)
-
-        val category = spinnerCategory.selectedItem.toString()
-        var fare = baseFare[category]!! +
-                perKmRate[category]!! * distanceKm
-
-        if (cbBaggage.isChecked) fare += baggageFee
-        if (cbNight.isChecked) fare += nightFee
-        if (cbAnimal.isChecked) fare += animalFee
-
-        textViewFare.text =
-            String.format("Tarif: %.2f €", fare)
     }
 }
