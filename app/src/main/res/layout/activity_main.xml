@@ -3,43 +3,91 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:gravity="center">
 
     <TextView
-        android:id="@+id/textViewWelcome"
+        android:id="@+id/textViewDistance"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Bienvenue sur TaxiMeter !"
+        android:text="Distance: 0.0 km"
         android:textSize="24sp"
-        android:layout_marginBottom="24dp"/>
+        android:layout_marginTop="16dp" />
 
     <TextView
         android:id="@+id/textViewTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Temps: 0:00"
-        android:textSize="20sp"
-        android:layout_marginBottom="16dp"/>
+        android:text="Temps: 00:00:00"
+        android:textSize="24sp"
+        android:layout_marginTop="8dp" />
 
     <TextView
         android:id="@+id/textViewFare"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Tarif: €0.00"
-        android:textSize="20sp"
-        android:layout_marginBottom="24dp"/>
+        android:text="Tarif: 0.0 €"
+        android:textSize="24sp"
+        android:layout_marginTop="8dp" />
 
-    <Button
-        android:id="@+id/btnStart"
+    <Spinner
+        android:id="@+id/spinnerCategory"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Démarrer le compteur"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginTop="16dp" />
 
-    <Button
-        android:id="@+id/btnStop"
+    <LinearLayout
+        android:orientation="horizontal"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Arrêter le compteur"/>
+        android:layout_marginTop="16dp">
+
+        <CheckBox
+            android:id="@+id/cbBaggage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bagage" />
+
+        <CheckBox
+            android:id="@+id/cbNight"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nuit"
+            android:layout_marginStart="8dp" />
+
+        <CheckBox
+            android:id="@+id/cbAnimal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Animal"
+            android:layout_marginStart="8dp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp">
+
+        <Button
+            android:id="@+id/btnStart"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Start" />
+
+        <Button
+            android:id="@+id/btnStop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Stop"
+            android:layout_marginStart="8dp" />
+
+        <Button
+            android:id="@+id/btnReset"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reset"
+            android:layout_marginStart="8dp" />
+
+    </LinearLayout>
 </LinearLayout>
