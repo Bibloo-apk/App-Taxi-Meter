@@ -1,33 +1,15 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
-
-    <EditText
-        android:id="@+id/distanceInput"
-        android:hint="Distance (km)"
-        android:inputType="numberDecimal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-
-    <EditText
-        android:id="@+id/timeInput"
-        android:hint="Temps (minutes)"
-        android:inputType="numberDecimal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-
-    <Button
-        android:id="@+id/calculateButton"
-        android:text="Calculer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+    android:gravity="center"
+    android:orientation="vertical">
 
     <TextView
-        android:id="@+id/resultText"
-        android:text="Tarif: -"
-        android:textSize="20sp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TaxiMeter fonctionne 🚕"
+        android:textSize="20sp"/>
+
 </LinearLayout>
