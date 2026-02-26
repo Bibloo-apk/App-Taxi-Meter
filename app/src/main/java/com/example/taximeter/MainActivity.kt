@@ -45,6 +45,7 @@ class MainActivity : AppCompatActivity() {
     private val baggageFee = 1.0
     private val nightFee = 2.0
     private val animalFee = 1.5
+    private val MIN_DISTANCE_METERS = 2f
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,8 +66,10 @@ class MainActivity : AppCompatActivity() {
 
         locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
-            2000
-        ).build()
+            1000
+        )
+        .setMinUpdateIntervalMillis(500)
+        .build()
 
         val categories = arrayOf("A", "B", "C", "D")
         spinnerCategory.adapter =
@@ -152,14 +155,23 @@ class MainActivity : AppCompatActivity() {
 
             val location = result.lastLocation ?: return
 
-            if (lastLocation != null) {
-                distanceMeters += lastLocation!!.distanceTo(location)
-            }
+            // 🔥 Ignore si précision mauvaise (> 20 mètres)
+            if (location.accuracy > 20) return
 
-            lastLocation = location
-            updateDisplay()
+            if (lastLocation != null) {
+
+                val distance = lastLocation!!.distanceTo(location)
+
+                // 🔥 Ignore les micro déplacements (< 2 mètres)
+                if (distance > MIN_DISTANCE_METERS) {
+                    distanceMeters += distance
+            }
         }
+
+        lastLocation = location
+        updateDisplay()
     }
+}
 
     private fun runTimer() {
         Thread {
