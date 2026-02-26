@@ -3,131 +3,163 @@ package com.example.taximeter
 import android.Manifest
 import android.content.pm.PackageManager
 import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.widget.Button
-import android.widget.TextView
+import android.os.SystemClock
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import java.text.DecimalFormat
+import androidx.core.content.ContextCompat
+import com.google.android.gms.location.*
 
-class MainActivity : AppCompatActivity(), LocationListener {
+class MainActivity : AppCompatActivity() {
 
-    private lateinit var textViewFare: TextView
+    private lateinit var textViewDistance: TextView
     private lateinit var textViewTime: TextView
+    private lateinit var textViewFare: TextView
     private lateinit var btnStart: Button
     private lateinit var btnStop: Button
+    private lateinit var btnReset: Button
+    private lateinit var spinnerCategory: Spinner
+    private lateinit var cbBaggage: CheckBox
+    private lateinit var cbNight: CheckBox
+    private lateinit var cbAnimal: CheckBox
 
     private var running = false
-    private var secondsElapsed = 0
-    private var totalDistance = 0.0 // en km
-    private var fare = 0.0
+    private var startTime = 0L
+    private var elapsedTime = 0L
 
-    private val handler = Handler(Looper.getMainLooper())
-    private val formatter = DecimalFormat("0.00")
-
-    private lateinit var locationManager: LocationManager
+    private var distanceMeters = 0.0
     private var lastLocation: Location? = null
 
-    // Tarifs par catégorie
-    private val tariffs = mapOf(
-        "A" to Tariff(base = 3.40, perKm = 1.05, perMinute = 0.35),
-        "B" to Tariff(base = 4.00, perKm = 1.20, perMinute = 0.40),
-        "C" to Tariff(base = 5.00, perKm = 1.50, perMinute = 0.50),
-        "D" to Tariff(base = 6.00, perKm = 2.00, perMinute = 0.60)
-    )
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
 
-    private var selectedCategory = "A"
-
-    // Suppléments
-    private val supplementBaggage = 1.0
-    private val supplementNight = 2.0
-    private val supplementAnimal = 1.5
+    // Tarifs officiels (exemple)
+    private val baseFare = mapOf("A" to 3.0, "B" to 4.0, "C" to 5.0, "D" to 6.0)
+    private val perKmRate = mapOf("A" to 1.5, "B" to 2.0, "C" to 2.5, "D" to 3.0)
+    private val baggageFee = 1.0
+    private val nightFee = 2.0
+    private val animalFee = 1.5
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        textViewFare = findViewById(R.id.textViewFare)
+        textViewDistance = findViewById(R.id.textViewDistance)
         textViewTime = findViewById(R.id.textViewTime)
+        textViewFare = findViewById(R.id.textViewFare)
         btnStart = findViewById(R.id.btnStart)
         btnStop = findViewById(R.id.btnStop)
+        btnReset = findViewById(R.id.btnReset)
+        spinnerCategory = findViewById(R.id.spinnerCategory)
+        cbBaggage = findViewById(R.id.cbBaggage)
+        cbNight = findViewById(R.id.cbNight)
+        cbAnimal = findViewById(R.id.cbAnimal)
 
-        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        val categories = arrayOf("A", "B", "C", "D")
+        spinnerCategory.adapter =
+            ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, categories)
 
         btnStart.setOnClickListener {
-            if (!running) {
-                running = true
-                secondsElapsed = 0
-                totalDistance = 0.0
-                fare = 0.0
-                lastLocation = null
-                startTimer()
-                startLocationUpdates()
-            }
+            startMeter()
         }
 
         btnStop.setOnClickListener {
-            running = false
-            stopLocationUpdates()
+            stopMeter()
         }
 
-        updateDisplay()
+        btnReset.setOnClickListener {
+            resetMeter()
+        }
     }
 
-    private fun startTimer() {
-        handler.post(object : Runnable {
-            override fun run() {
-                if (running) {
-                    secondsElapsed++
+    private fun startMeter() {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                1
+            )
+            return
+        }
 
-                    calculateFare()
-                    updateDisplay()
+        running = true
+        startTime = SystemClock.elapsedRealtime() - elapsedTime
+        lastLocation = null
+        fusedLocationClient.requestLocationUpdates(
+            LocationRequest.create().apply {
+                interval = 2000
+                fastestInterval = 1000
+                priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+            },
+            locationCallback,
+            null
+        )
 
-                    handler.postDelayed(this, 1000)
-                }
+        runTimer()
+    }
+
+    private fun stopMeter() {
+        running = false
+        fusedLocationClient.removeLocationUpdates(locationCallback)
+    }
+
+    private fun resetMeter() {
+        running = false
+        elapsedTime = 0L
+        distanceMeters = 0.0
+        lastLocation = null
+        textViewDistance.text = "Distance: 0.0 km"
+        textViewTime.text = "Temps: 00:00:00"
+        textViewFare.text = "Tarif: 0.0 €"
+    }
+
+    private val locationCallback = object : LocationCallback() {
+        override fun onLocationResult(result: LocationResult) {
+            if (!running) return
+            val location = result.lastLocation ?: return
+            if (lastLocation != null) {
+                distanceMeters += lastLocation!!.distanceTo(location)
             }
-        })
+            lastLocation = location
+            updateDisplay()
+        }
     }
 
-    private fun calculateFare() {
-        val tariff = tariffs[selectedCategory]!!
-        val timeMinutes = secondsElapsed / 60.0
-        fare = tariff.base + totalDistance * tariff.perKm + timeMinutes * tariff.perMinute
-
-        // ici tu peux ajouter les suppléments selon la logique
-        // exemple: fare += supplementBaggage, supplementNight etc.
+    private fun runTimer() {
+        Thread {
+            while (running) {
+                elapsedTime = SystemClock.elapsedRealtime() - startTime
+                runOnUiThread { updateDisplay() }
+                Thread.sleep(1000)
+            }
+        }.start()
     }
 
     private fun updateDisplay() {
-        val minutes = secondsElapsed / 60
-        val seconds = secondsElapsed % 60
-        textViewTime.text = "Temps: $minutes:${if (seconds < 10) "0$seconds" else "$seconds"}"
-        textViewFare.text = "Tarif: €${formatter.format(fare)}"
-    }
+        // Temps
+        val totalSeconds = elapsedTime / 1000
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+        textViewTime.text = String.format("Temps: %02d:%02d:%02d", hours, minutes, seconds)
 
-    private fun startLocationUpdates() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1)
-            return
-        }
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1f, this)
-    }
+        // Distance
+        val distanceKm = distanceMeters / 1000
+        textViewDistance.text = String.format("Distance: %.2f km", distanceKm)
 
-    private fun stopLocationUpdates() {
-        locationManager.removeUpdates(this)
-    }
+        // Tarif
+        val category = spinnerCategory.selectedItem.toString()
+        var fare = baseFare[category]!! + perKmRate[category]!! * distanceKm
+        if (cbBaggage.isChecked) fare += baggageFee
+        if (cbNight.isChecked) fare += nightFee
+        if (cbAnimal.isChecked) fare += animalFee
 
-    override fun onLocationChanged(location: Location) {
-        lastLocation?.let {
-            totalDistance += it.distanceTo(location) / 1000.0 // distance en km
-        }
-        lastLocation = location
+        textViewFare.text = String.format("Tarif: %.2f €", fare)
     }
-
-    data class Tariff(val base: Double, val perKm: Double, val perMinute: Double)
 }
