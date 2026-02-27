@@ -14,12 +14,16 @@ class LocationService : Service() {
 
     private var distanceMeters = 0.0
     private var lastLocation: Location? = null
+    private var startTime = 0L
 
     companion object {
         const val CHANNEL_ID = "TaxiMeterChannel"
         const val ACTION_START = "ACTION_START"
         const val ACTION_STOP = "ACTION_STOP"
         const val MIN_DISTANCE_METERS = 2f
+        const val ACTION_UPDATE = "ACTION_UPDATE"
+        const val EXTRA_DISTANCE = "EXTRA_DISTANCE"
+        const val EXTRA_TIME = "EXTRA_TIME"
     }
 
     override fun onCreate() {
@@ -58,6 +62,7 @@ class LocationService : Service() {
             .build()
 
         startForeground(1, notification)
+        startTime = System.currentTimeMillis()
 
         fusedLocationClient.requestLocationUpdates(
             locationRequest,
@@ -73,20 +78,26 @@ class LocationService : Service() {
     }
 
     private val locationCallback = object : LocationCallback() {
-        override fun onLocationResult(result: LocationResult) {
+    override fun onLocationResult(result: LocationResult) {
 
-            val location = result.lastLocation ?: return
+        val location = result.lastLocation ?: return
+        if (location.accuracy > 20) return
 
-            if (location.accuracy > 20) return
-
-            if (lastLocation != null) {
-                val distance = lastLocation!!.distanceTo(location)
-                if (distance > MIN_DISTANCE_METERS) {
-                    distanceMeters += distance
-                }
+        if (lastLocation != null) {
+            val distance = lastLocation!!.distanceTo(location)
+            if (distance > MIN_DISTANCE_METERS) {
+                distanceMeters += distance
             }
+        }
 
-            lastLocation = location
+        lastLocation = location
+
+        val elapsedTime = System.currentTimeMillis() - startTime
+
+        val intent = Intent(ACTION_UPDATE)
+        intent.putExtra(EXTRA_DISTANCE, distanceMeters)
+        intent.putExtra(EXTRA_TIME, elapsedTime)
+        sendBroadcast(intent)
         }
     }
 
