@@ -62,22 +62,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val receiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == LocationService.ACTION_UPDATE) {
-                distanceMeters =
-                    intent.getDoubleExtra(LocationService.EXTRA_DISTANCE, 0.0)
-                elapsedTime =
-                    intent.getLongExtra(LocationService.EXTRA_TIME, 0L)
-                updateDisplay()
-            }
-        }
+    override fun onReceive(context: Context?, intent: Intent?) {
+        val distance = intent?.getDoubleExtra(LocationService.EXTRA_DISTANCE, 0.0) ?: 0.0
+        val elapsedTime = intent?.getLongExtra(LocationService.EXTRA_TIME, 0L) ?: 0L
+
+        // Met à jour l’UI
+        updateDisplay(distance, elapsedTime)
     }
+}
 
     override fun onResume() {
     super.onResume()
-
     val filter = IntentFilter(LocationService.ACTION_UPDATE)
-
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
         registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
     } else {
@@ -85,36 +81,29 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-    override fun onPause() {
-        super.onPause()
-        unregisterReceiver(receiver)
-    }
+override fun onPause() {
+    super.onPause()
+    unregisterReceiver(receiver)
+}
 
-    private fun updateDisplay() {
+    private fun updateDisplay(distanceMeters: Double, elapsedTime: Long) {
+    val totalSeconds = elapsedTime / 1000
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    textViewTime.text = String.format("Temps: %02d:%02d:%02d", hours, minutes, seconds)
 
-        val totalSeconds = elapsedTime / 1000
-        val hours = totalSeconds / 3600
-        val minutes = (totalSeconds % 3600) / 60
-        val seconds = totalSeconds % 60
+    val distanceKm = distanceMeters / 1000
+    textViewDistance.text = String.format("Distance: %.2f km", distanceKm)
 
-        textViewTime.text =
-            String.format("Temps: %02d:%02d:%02d", hours, minutes, seconds)
+    val category = spinnerCategory.selectedItem.toString()
+    var fare = baseFare[category]!! + perKmRate[category]!! * distanceKm
+    if (cbBaggage.isChecked) fare += baggageFee
+    if (cbNight.isChecked) fare += nightFee
+    if (cbAnimal.isChecked) fare += animalFee
 
-        val distanceKm = distanceMeters / 1000
-        textViewDistance.text =
-            String.format("Distance: %.2f km", distanceKm)
-
-        val category = spinnerCategory.selectedItem.toString()
-        var fare = baseFare[category]!! +
-                perKmRate[category]!! * distanceKm
-
-        if (cbBaggage.isChecked) fare += baggageFee
-        if (cbNight.isChecked) fare += nightFee
-        if (cbAnimal.isChecked) fare += animalFee
-
-        textViewFare.text =
-            String.format("Tarif: %.2f €", fare)
-    }
+    textViewFare.text = String.format("Tarif: %.2f €", fare)
+}
 
     private fun resetDisplay() {
         textViewDistance.text = "Distance: 0.0 km"
