@@ -104,10 +104,12 @@ override fun onPause() {
 }
 
     private fun resetDisplay() {
-        textViewDistance.text = "Distance: 0.0 km"
-        textViewTime.text = "Temps: 00:00:00"
-        textViewFare.text = "Tarif: 0.0 €"
-    }
+    distanceMeters = 0.0
+    elapsedTime = 0L
+    textViewDistance.text = "Distance: 0.0 km"
+    textViewTime.text = "Temps: 00:00:00"
+    textViewFare.text = "Tarif: 0.0 €"
+}
 
     private fun startMeter() {
         val intent = Intent(this, LocationService::class.java)
