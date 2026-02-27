@@ -63,11 +63,9 @@ class MainActivity : AppCompatActivity() {
 
     private val receiver = object : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
-        val distance = intent?.getDoubleExtra(LocationService.EXTRA_DISTANCE, 0.0) ?: 0.0
-        val elapsedTime = intent?.getLongExtra(LocationService.EXTRA_TIME, 0L) ?: 0L
-
-        // Met à jour l’UI
-        updateDisplay(distance, elapsedTime)
+        distanceMeters = intent?.getDoubleExtra(LocationService.EXTRA_DISTANCE, 0.0) ?: 0.0
+        elapsedTime = intent?.getLongExtra(LocationService.EXTRA_TIME, 0L) ?: 0L
+        updateDisplay(distanceMeters, elapsedTime)
     }
 }
 
