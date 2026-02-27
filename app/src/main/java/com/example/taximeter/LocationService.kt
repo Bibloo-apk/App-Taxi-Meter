@@ -95,10 +95,10 @@ class LocationService : Service() {
 
         val elapsedTime = System.currentTimeMillis() - startTime
 
-        val intent = Intent(ACTION_UPDATE)
-        intent.putExtra(EXTRA_DISTANCE, distanceMeters)
-        intent.putExtra(EXTRA_TIME, elapsedTime)
-        sendBroadcast(intent)
+        val intent = Intent(LocationService.ACTION_UPDATE)
+intent.putExtra(LocationService.EXTRA_DISTANCE, distanceMeters)
+intent.putExtra(LocationService.EXTRA_TIME, elapsedTime)
+sendBroadcast(intent)
         }
     }
 
