@@ -53,6 +53,7 @@ class LocationService : Service() {
     }
 
     private fun startTracking() {
+        if (::fusedLocationClient.isInitialized.not()) return
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Taximètre actif 🚕")
