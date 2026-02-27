@@ -74,9 +74,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onResume() {
-        super.onResume()
-        registerReceiver(receiver, IntentFilter(LocationService.ACTION_UPDATE))
+    super.onResume()
+
+    val filter = IntentFilter(LocationService.ACTION_UPDATE)
+
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+    } else {
+        registerReceiver(receiver, filter)
     }
+}
 
     override fun onPause() {
         super.onPause()
