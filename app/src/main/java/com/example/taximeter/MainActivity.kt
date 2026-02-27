@@ -17,6 +17,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val LOCATION_PERMISSION_CODE = 1000
+        private const val NOTIFICATION_PERMISSION_CODE = 2000
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,20 +33,39 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkPermissionAndStart() {
+
+    // Vérifie GPS
+    if (ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) != PackageManager.PERMISSION_GRANTED
+    ) {
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+            LOCATION_PERMISSION_CODE
+        )
+        return
+    }
+
+    // 🔥 Vérifie Notification (Android 13+)
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
         if (ContextCompat.checkSelfPermission(
                 this,
-                Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.POST_NOTIFICATIONS
             ) != PackageManager.PERMISSION_GRANTED
         ) {
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                LOCATION_PERMISSION_CODE
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                NOTIFICATION_PERMISSION_CODE
             )
-        } else {
-            startMeter()
+            return
         }
     }
+
+    startMeter()
+}
 
     private fun startMeter() {
         val intent = Intent(this, LocationService::class.java)
@@ -62,13 +82,29 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    requestCode: Int,
+    permissions: Array<out String>,
+    grantResults: IntArray
+) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        if (requestCode == LOCATION_PERMISSION_CODE) {
+    when (requestCode) {
+
+        LOCATION_PERMISSION_CODE -> {
+            if (grantResults.isNotEmpty() &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED
+            ) {
+                checkPermissionAndStart()
+            } else {
+                Toast.makeText(
+                    this,
+                    "Permission GPS nécessaire",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
+        NOTIFICATION_PERMISSION_CODE -> {
             if (grantResults.isNotEmpty() &&
                 grantResults[0] == PackageManager.PERMISSION_GRANTED
             ) {
@@ -76,9 +112,10 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(
                     this,
-                    "Permission GPS nécessaire",
+                    "Permission notification nécessaire",
                     Toast.LENGTH_LONG
                 ).show()
+                }
             }
         }
     }
